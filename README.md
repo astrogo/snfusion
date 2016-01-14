@@ -1,6 +1,8 @@
 snfusion
 ========
 
+[![GoDoc](https://godoc.org/github.com/astrogo/snfusion?status.svg)](https://godoc.org/github.com/astrogo/snfusion)
+
 `snfusion` is a simple simulation program modelling fusion processes happening in supernovae.
 
 ## Installation
@@ -8,6 +10,10 @@ snfusion
 ```sh
 $> go get github.com/astrogo/snfusion/...
 ```
+
+## Documentation
+
+Documentation is available on [godoc.org](https://godoc.org/github.com/astrogo/snfusion).
 
 ## Example
 

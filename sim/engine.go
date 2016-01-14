@@ -1,3 +1,16 @@
+// Package sim provides utilities to simulate fusion processes
+// happening in a supernova.
+//
+// A typical use case would look like:
+//
+//	var w io.Writer
+//	engine := sim.Engine{
+//		NumIters:   *nIters,
+//		NumCarbons: *nCarbons,
+//		Seed:       *seed,
+//	}
+//	err = engine.Run(w)
+//
 package sim
 
 import (
@@ -48,19 +61,11 @@ type Engine struct {
 	wcsv       *csv.Writer
 }
 
-func NewEngine(niters int, ncarbons int, seed int64, w io.Writer) *Engine {
-	return &Engine{
-		NumIters:   niters,
-		NumCarbons: ncarbons,
-		Seed:       seed,
-		Population: Population,
-		rng:        rand.New(rand.NewSource(seed)),
-		w:          w,
-	}
-}
-
-func (e *Engine) Run() error {
-	err := e.init()
+// Run runs the whole simulation and writes data (as well as
+// metadata) into w.
+// The data is written as a CSV file with '#' comments and ';' separators.
+func (e *Engine) Run(w io.Writer) error {
+	err := e.init(w)
 	if err != nil {
 		return err
 	}
@@ -90,7 +95,10 @@ func (e *Engine) Run() error {
 	return err
 }
 
-func (e *Engine) init() error {
+func (e *Engine) init(w io.Writer) error {
+	e.rng = rand.New(rand.NewSource(e.Seed))
+	e.w = w
+
 	var err error
 	const nmax = 10000
 	e.nuclei = make([]Nucleus, 0, nmax)

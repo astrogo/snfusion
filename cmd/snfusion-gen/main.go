@@ -59,8 +59,13 @@ func main() {
 	w := bufio.NewWriter(f)
 	defer w.Flush()
 
-	engine := sim.NewEngine(*nIters, *nCarbons, *seed, w)
-	err = engine.Run()
+	engine := sim.Engine{
+		NumIters:   *nIters,
+		NumCarbons: *nCarbons,
+		Seed:       *seed,
+	}
+
+	err = engine.Run(w)
 	delta := time.Now().Sub(beg)
 	log.Printf("processing... [done]: %v\n", delta)
 
