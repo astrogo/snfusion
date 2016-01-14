@@ -134,7 +134,7 @@ func main() {
 				n, err,
 			)
 		}
-		line.LineStyle.Color = col(i)
+		line.LineStyle.Color = col(n)
 		line.LineStyle.Width = vg.Points(1)
 		p.Add(line)
 		p.Legend.Add(label(n), line)
@@ -186,36 +186,34 @@ func label(n sim.Nucleus) string {
 	return n.String()
 }
 
-func col(i int) color.Color {
-	return plotutil.Color(i)
+func rgb(r, g, b uint8) color.RGBA {
+	return color.RGBA{r, g, b, 255}
 }
 
-/*
-func color(n sim.Nucleus) color.RGBA {
+func col(n sim.Nucleus) color.Color {
 	switch n {
 	case sim.Nucleus{A: 12, Z: 6}:
-		return "12-C"
+		return rgb(0, 0, 0)
 	case sim.Nucleus{A: 16, Z: 8}:
-		return "16-O"
+		return rgb(0, 0, 255)
 	case sim.Nucleus{A: 24, Z: 12}:
-		return "24-Mg"
+		return rgb(0, 255, 0)
 	case sim.Nucleus{A: 28, Z: 14}:
-		return "28-Si"
+		return rgb(0, 128, 255)
 	case sim.Nucleus{A: 32, Z: 16}:
-		return "32-S"
+		return rgb(255, 255, 51)
 	case sim.Nucleus{A: 36, Z: 18}:
-		return "36-Ar"
+		return rgb(128, 128, 128)
 	case sim.Nucleus{A: 40, Z: 20}:
-		return "40-Ca"
+		return rgb(192, 192, 192)
 	case sim.Nucleus{A: 44, Z: 22}:
-		return "44-Ti"
+		return rgb(255, 0, 255)
 	case sim.Nucleus{A: 48, Z: 24}:
-		return "48-Cr"
+		return rgb(51, 255, 255)
 	case sim.Nucleus{A: 52, Z: 26}:
-		return "52-Fe"
+		return rgb(255, 165, 0)
 	case sim.Nucleus{A: 56, Z: 28}:
-		return "56-Ni"
+		return rgb(255, 0, 0)
 	}
-	return n.String()
+	return plotutil.Color(n.A)
 }
-*/
