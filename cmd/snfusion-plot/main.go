@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"image/color"
 	"io"
 	"log"
 	"os"
@@ -133,7 +134,7 @@ func main() {
 				n, err,
 			)
 		}
-		line.LineStyle.Color = plotutil.Color(i)
+		line.LineStyle.Color = col(i)
 		line.LineStyle.Width = vg.Points(1)
 		p.Add(line)
 		p.Legend.Add(label(n), line)
@@ -141,10 +142,10 @@ func main() {
 
 	p.Add(plotter.NewGrid())
 	p.Legend.Top = true
-	p.Legend.Left = true
+	p.Legend.XOffs = -1 * vg.Centimeter
 
 	// Save the plot to a PNG file.
-	if err := p.Save(18*vg.Centimeter, 9*vg.Centimeter, *ofname); err != nil {
+	if err := p.Save(25*vg.Centimeter, 15*vg.Centimeter, *ofname); err != nil {
 		panic(err)
 	}
 }
@@ -183,6 +184,10 @@ func label(n sim.Nucleus) string {
 		return "56-Ni"
 	}
 	return n.String()
+}
+
+func col(i int) color.Color {
+	return plotutil.Color(i)
 }
 
 /*
