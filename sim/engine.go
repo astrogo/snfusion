@@ -162,7 +162,7 @@ func (e *Engine) process() error {
 		// can't fuse nuclei
 		return err
 	}
-	fuse := e.rng.Intn(10) < 5
+	fuse := e.rng.Float64() < xsects[pair{ni, nj}]
 	switch fuse {
 	case true:
 		e.nuclei[i] = o
