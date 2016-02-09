@@ -12,6 +12,7 @@ import (
 	"image/color"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 
@@ -21,6 +22,8 @@ import (
 	"github.com/gonum/plot/plotutil"
 	"github.com/gonum/plot/vg"
 )
+
+var phi = (1 + math.Sqrt(5)) / 2
 
 func main() {
 	ifname := flag.String("f", "output.csv", "input CSV file to analyze")
@@ -144,8 +147,11 @@ func main() {
 	p.Legend.Top = true
 	p.Legend.XOffs = -1 * vg.Centimeter
 
+	figX := 25 * vg.Centimeter
+	figY := figX / vg.Length(phi)
+
 	// Save the plot to a PNG file.
-	if err := p.Save(25*vg.Centimeter, 15*vg.Centimeter, *ofname); err != nil {
+	if err := p.Save(figX, figY, *ofname); err != nil {
 		panic(err)
 	}
 }
