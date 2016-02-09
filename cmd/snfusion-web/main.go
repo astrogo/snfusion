@@ -9,10 +9,12 @@ import (
 	"io"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"text/template"
 
 	"github.com/astrogo/snfusion/sim"
 	"github.com/gonum/plot"
@@ -42,8 +44,7 @@ func main() {
 
 type server struct {
 	Addr string
-	// tmpl *template.Template
-	rootfs http.Handler
+	tmpl *template.Template
 
 	clients    map[*client]bool // registered clients
 	register   chan *client
@@ -53,12 +54,9 @@ type server struct {
 }
 
 func newServer() *server {
-	fname := rootfs + "/index.html"
-	log.Printf("serving [%s]...\n", fname)
 	srv := &server{
-		Addr:   ":7071",
-		rootfs: http.FileServer(http.Dir(rootfs)),
-		// tmpl:       template.Must(template.New("snfusion").ParseFiles(fname)),
+		Addr:       getHostIP() + ":7071",
+		tmpl:       template.Must(template.New("snfusion").Parse(index)),
 		clients:    make(map[*client]bool),
 		register:   make(chan *client),
 		unregister: make(chan *client),
@@ -89,8 +87,8 @@ func (srv *server) run() {
 
 func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("accepting new connection from %v...\n", r.Host)
-	// srv.tmpl.Execute(w, srv)
-	srv.rootfs.ServeHTTP(w, r)
+	srv.tmpl.Execute(w, srv)
+	// srv.rootfs.ServeHTTP(w, r)
 }
 
 func (srv *server) dataHandler(ws *websocket.Conn) {
@@ -329,4 +327,27 @@ func col(n sim.Nucleus) color.Color {
 		return rgb(255, 0, 0)
 	}
 	return plotutil.Color(n.A)
+}
+
+func getHostIP() string {
+	host, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("could not retrieve hostname: %v\n", err)
+	}
+
+	addrs, err := net.LookupIP(host)
+	if err != nil {
+		log.Fatalf("could not lookup hostname IP: %v\n", err)
+	}
+
+	for _, addr := range addrs {
+		ipv4 := addr.To4()
+		if ipv4 == nil {
+			continue
+		}
+		return ipv4.String()
+	}
+
+	log.Fatalf("could not infer host IP")
+	return ""
 }
