@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -59,6 +60,12 @@ type Engine struct {
 	rng        *rand.Rand
 	w          io.Writer
 	wcsv       *csv.Writer
+	msg        *log.Logger
+}
+
+// SetLogger setups the logging output of the simulation engine.
+func (e *Engine) SetLogger(msg *log.Logger) {
+	e.msg = msg
 }
 
 // Run runs the whole simulation and writes data (as well as
@@ -72,7 +79,7 @@ func (e *Engine) Run(w io.Writer) error {
 
 	defer e.wcsv.Flush()
 
-	log.Printf("%v\n", e.stats())
+	e.msg.Printf("%v\n", e.stats())
 
 	for i := 0; i < e.NumIters; i++ {
 		err = e.process()
@@ -80,11 +87,11 @@ func (e *Engine) Run(w io.Writer) error {
 			return err
 		}
 		if (i+1)%int(float64(e.NumIters)*0.1) == 0 {
-			log.Printf("iter #%d/%d...\n", i+1, e.NumIters)
+			e.msg.Printf("iter #%d/%d...\n", i+1, e.NumIters)
 		}
 	}
 
-	log.Printf("%v\n", e.stats())
+	e.msg.Printf("%v\n", e.stats())
 
 	e.wcsv.Flush()
 	err = e.wcsv.Error()
@@ -98,6 +105,10 @@ func (e *Engine) Run(w io.Writer) error {
 func (e *Engine) init(w io.Writer) error {
 	e.rng = rand.New(rand.NewSource(e.Seed))
 	e.w = w
+
+	if e.msg == nil {
+		e.msg = log.New(os.Stdout, "snfusion-sim: ", 0)
+	}
 
 	var err error
 	const nmax = 10000
