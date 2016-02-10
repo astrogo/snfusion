@@ -80,9 +80,18 @@
 
 var sock = null;
 var wsuri = "ws://{{.Addr}}/data";
+var snfusion_id = 0;
 
 window.onload = function() {
 	console.log("onload");
+
+	function KeyPress(e) {
+		var evtobj = window.event? event : e;
+		if (evtobj.keyCode == 13 && evtobj.ctrlKey) {
+			snfusionGen();
+		};
+	}
+	document.onkeydown = KeyPress;
 
 	sock = new WebSocket(wsuri);
 
@@ -101,16 +110,27 @@ window.onload = function() {
 			case "gen-done":
 				document.getElementById("sim-spinner").active = false;
 				if (obj["err"] != null) {
-					document.getElementById("snfusion-gen-output").innerHTML = JSON.stringify(obj["err"]);
+					document.getElementById("snfusion-gen-"+snfusion_id).innerHTML = JSON.stringify(obj["err"]);
+				}
+				if (obj["msg"] != null) {
+					var text = "<pre style=\"text-align: left\">";
+					var msg = obj.msg.split("\n");
+					for (i = 0; i < msg.length; i++) { 
+						text += msg[i] + "<br>";
+					}
+					text += "</pre>"
+					document.getElementById("snfusion-gen-"+snfusion_id).innerHTML = text;
 				}
 				break;
 			case "plot-done":
-				document.getElementById("snfusion-plot").innerHTML = obj["svg"];
+				document.getElementById("snfusion-plot-"+snfusion_id).innerHTML = obj["svg"];
+				break;
 		}
 	}
 };
 
 function snfusionGen() {
+	snfusion_id++;
 	document.getElementById("sim-spinner").active = true;
 	var data = {
 		"num_iters": Number(document.getElementById("num-iters").value),
@@ -118,6 +138,20 @@ function snfusionGen() {
 		"seed": Number(document.getElementById("seed").value)
 	}
 	console.log("data: "+JSON.stringify(data));
+	var div = document.createElement("div");
+	div.id = "snfusion-report-" + snfusion_id
+	div.innerHTML = "<h2 id=\"snfusion-report-"+snfusion_id+"\">Simulation - " + snfusion_id + "</h2>";
+
+	var gen = document.createElement("p");
+	gen.id = "snfusion-gen-" + snfusion_id;
+
+	var plot = document.createElement("p");
+	plot.id = "snfusion-plot-" + snfusion_id;
+	div.appendChild(gen);
+	div.appendChild(plot);
+
+	var sims = document.getElementById("snfusion-sim");
+	sims.insertBefore(div, sims.childNodes[0]);
 
 	sock.send(JSON.stringify(data));
 }
@@ -148,11 +182,11 @@ function snfusionGen() {
 					</div>
 					<br>
 					<center>
-						<paper-button raised class="colorful" onclick="snfusionGen()">Launch simulation</paper-button>
+						<paper-button raised class="colorful" onclick="snfusionGen()" id="snfusion-launch">Launch simulation</paper-button>
 						<br>
 						<paper-spinner alt="Running simulation..." id="sim-spinner"></paper-spinner>
-						<p id="snfusion-gen-output"></p>
-						<p id="snfusion-plot"></p>
+						<div id="snfusion-sim">
+						</div>
 					</center>
 				</div>
 			</div>

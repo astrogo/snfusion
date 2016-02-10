@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"text/template"
+	"time"
 
 	"github.com/astrogo/snfusion/sim"
 	"github.com/gonum/plot"
@@ -124,6 +125,7 @@ func (c *client) run() {
 	type genReply struct {
 		Stage  string     `json:"stage"`
 		Err    error      `json:"err"`
+		Msg    string     `json:"msg"`
 		Engine sim.Engine `json:"engine"`
 	}
 
@@ -147,22 +149,32 @@ func (c *client) run() {
 			return
 		}
 
+		msgbuf := new(bytes.Buffer)
+		msg := log.New(msgbuf, "snfusion-sim: ", 0)
 		engine := sim.Engine{
 			NumIters:   param.NumIters,
 			NumCarbons: param.NumCarbons,
 			Seed:       param.Seed,
 		}
+		engine.SetLogger(msg)
 
 		log.Printf("processing... %#v\n", engine)
 		csvbuf := new(bytes.Buffer)
-		err = engine.Run(csvbuf)
+		errc := make(chan error)
+		ticker := time.NewTicker(1 * time.Second)
+		go func() {
+			errc <- engine.Run(csvbuf)
+			ticker.Stop()
+		}()
+
+		err = <-errc
 		if err != nil {
 			log.Printf("error: %v\n", err)
-			_ = websocket.JSON.Send(c.ws, genReply{Err: err, Engine: engine, Stage: "gen-done"})
+			_ = websocket.JSON.Send(c.ws, genReply{Err: err, Engine: engine, Stage: "gen-done", Msg: msgbuf.String()})
 			return
 		}
 
-		err = websocket.JSON.Send(c.ws, genReply{Err: err, Engine: engine, Stage: "gen-done"})
+		err = websocket.JSON.Send(c.ws, genReply{Err: err, Engine: engine, Stage: "gen-done", Msg: msgbuf.String()})
 		if err != nil {
 			log.Printf("error sending data: %v\n", err)
 			return
