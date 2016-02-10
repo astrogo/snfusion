@@ -56,7 +56,7 @@ type server struct {
 func newServer() *server {
 	srv := &server{
 		Addr:       getHostIP() + ":7071",
-		tmpl:       template.Must(template.New("snfusion").Parse(index)),
+		tmpl:       template.Must(template.New("snfusion").Parse(string(MustAsset("index.html")))),
 		clients:    make(map[*client]bool),
 		register:   make(chan *client),
 		unregister: make(chan *client),
