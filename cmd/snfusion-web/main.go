@@ -4,6 +4,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/md5"
 	"encoding/csv"
 	"fmt"
 	"image/color"
@@ -361,8 +362,6 @@ func download(w http.ResponseWriter, r *http.Request) {
 		handleErr(w, "error parsing form", err, http.StatusInternalServerError)
 	}
 
-	log.Printf("download: %#v\n", *r)
-
 	f, err := os.Open(r.Form.Get("file"))
 	if err != nil {
 		handleErr(w, "error opening report file", err, http.StatusInternalServerError)
@@ -371,8 +370,12 @@ func download(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 	io.Copy(w, f)
 
-	//copy the relevant headers. If you want to preserve the downloaded file name, extract it with go's url parser.
-	w.Header().Set("Content-Disposition", "attachment; filename=output.zip")
+	crutime := time.Now().Unix()
+	h := md5.New()
+	io.WriteString(h, strconv.FormatInt(crutime, 10))
+	fname := fmt.Sprintf("output-%x.zip", h.Sum(nil))
+
+	w.Header().Set("Content-Disposition", "attachment; filename="+fname)
 	w.Header().Set("Content-Type", "application/force-download")
 }
 
