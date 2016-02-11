@@ -140,7 +140,7 @@ window.onload = function() {
 				var dl = document.createElement("form");
 				dl.id = "snfusion-submit-form-" + id;
 				dl.method="post";
-				dl.action="http://{{.Addr}}/download?"+encodeURI(obj.href);
+				dl.action="http://{{.Addr}}/download?file="+encodeURI(obj.href);
 				dl.innerHTML = "<paper-button raised onclick=\"submitForm("+id+")\" class=\"colorful\" id=\"snfusion-download-"+snfusion_id+"\">Download ZIP<br>(Simulation - "+id+")</paper-button>";
 				div.appendChild(dl); 
 				break;
