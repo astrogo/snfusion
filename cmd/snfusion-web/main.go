@@ -356,10 +356,6 @@ func (c *client) run() {
 }
 
 func download(w http.ResponseWriter, r *http.Request) {
-	//copy the relevant headers. If you want to preserve the downloaded file name, extract it with go's url parser.
-	w.Header().Set("Content-Disposition", "attachment; filename=output.zip")
-	w.Header().Set("Content-Type", "application/force-download")
-
 	err := r.ParseForm()
 	if err != nil {
 		handleErr(w, "error parsing form", err, http.StatusInternalServerError)
@@ -374,6 +370,10 @@ func download(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 	io.Copy(w, f)
+
+	//copy the relevant headers. If you want to preserve the downloaded file name, extract it with go's url parser.
+	w.Header().Set("Content-Disposition", "attachment; filename=output.zip")
+	w.Header().Set("Content-Type", "application/force-download")
 }
 
 func handleErr(w http.ResponseWriter, stage string, err error, code int) {
