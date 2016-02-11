@@ -2,11 +2,13 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/csv"
 	"fmt"
 	"image/color"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"net"
@@ -23,6 +25,7 @@ import (
 	"github.com/gonum/plot/plotutil"
 	"github.com/gonum/plot/vg"
 	"github.com/gonum/plot/vg/draw"
+	"github.com/gonum/plot/vg/vgimg"
 	"github.com/gonum/plot/vg/vgsvg"
 
 	"golang.org/x/net/websocket"
@@ -34,6 +37,7 @@ var (
 
 func main() {
 	srv := newServer()
+	http.HandleFunc("/download", download)
 	http.Handle("/", srv)
 	http.Handle("/data", websocket.Handler(srv.dataHandler))
 	log.Printf("listening on http://%s ...\n", srv.Addr)
@@ -110,19 +114,28 @@ type client struct {
 
 func (c *client) run() {
 	var err error
+	dir, err := ioutil.TempDir("", "snfusion-web-")
+	if err != nil {
+		log.Printf("error creating temporary directory: %v\n", err)
+		return
+	}
+
 	defer func() {
 		c.srv.unregister <- c
 		c.ws.Close()
 		c.srv = nil
+		os.RemoveAll(dir)
 	}()
 
 	type params struct {
+		ID         int   `json:"id"`
 		NumIters   int   `json:"num_iters"`
 		NumCarbons int   `json:"num_carbons"`
 		Seed       int64 `json:"seed"`
 	}
 
 	type genReply struct {
+		ID     int        `json:"id"`
 		Stage  string     `json:"stage"`
 		Err    error      `json:"err"`
 		Msg    string     `json:"msg"`
@@ -130,9 +143,17 @@ func (c *client) run() {
 	}
 
 	type plotReply struct {
+		ID    int    `json:"id"`
 		Stage string `json:"stage"`
 		Err   error  `json:"err"`
 		SVG   string `json:"svg"`
+	}
+
+	type zipReply struct {
+		ID    int    `json:"id"`
+		Stage string `json:"stage"`
+		Err   error  `json:"err"`
+		Href  string `json:"href"`
 	}
 
 	for {
@@ -148,6 +169,7 @@ func (c *client) run() {
 			log.Printf("error rcv: %v\n", err)
 			return
 		}
+		id := param.ID
 
 		msgbuf := new(bytes.Buffer)
 		msg := log.New(msgbuf, "snfusion-sim: ", 0)
@@ -170,15 +192,22 @@ func (c *client) run() {
 		err = <-errc
 		if err != nil {
 			log.Printf("error: %v\n", err)
-			_ = websocket.JSON.Send(c.ws, genReply{Err: err, Engine: engine, Stage: "gen-done", Msg: msgbuf.String()})
+			_ = websocket.JSON.Send(c.ws, genReply{
+				ID: id, Err: err, Engine: engine, Stage: "gen-done", Msg: msgbuf.String(),
+			})
 			return
 		}
 
-		err = websocket.JSON.Send(c.ws, genReply{Err: err, Engine: engine, Stage: "gen-done", Msg: msgbuf.String()})
+		err = websocket.JSON.Send(c.ws, genReply{
+			ID: id, Err: err, Engine: engine, Stage: "gen-done", Msg: msgbuf.String(),
+		})
 		if err != nil {
 			log.Printf("error sending data: %v\n", err)
 			return
 		}
+
+		csvdata := make([]byte, len(csvbuf.Bytes()))
+		copy(csvdata, csvbuf.Bytes())
 
 		log.Printf("running post-processing...\n")
 		r := csv.NewReader(csvbuf)
@@ -258,13 +287,99 @@ func (c *client) run() {
 			return
 		}
 
-		err = websocket.JSON.Send(c.ws, plotReply{Err: err, SVG: outsvg.String(), Stage: "plot-done"})
+		err = websocket.JSON.Send(c.ws, plotReply{
+			ID: id, Err: err, SVG: outsvg.String(), Stage: "plot-done",
+		})
 		if err != nil {
 			log.Printf("error sending data: %v\n", err)
 			return
 		}
+
+		pngcanvas := vgimg.PngCanvas{Canvas: vgimg.New(figX, figY)}
+		p.Draw(draw.New(pngcanvas))
+		outpng := new(bytes.Buffer)
+		_, err = pngcanvas.WriteTo(outpng)
+		if err != nil {
+			log.Printf("error png: %v\n", err)
+			return
+		}
+
+		href := filepath.Join(dir, fmt.Sprintf("output-%d.zip", id))
+		zipf, err := os.Create(href)
+		if err != nil {
+			log.Printf("error creating zip file: %v\n", err)
+		}
+		defer zipf.Close()
+
+		zipw := zip.NewWriter(zipf)
+		defer zipw.Close()
+
+		for _, file := range []struct {
+			Name string
+			Body []byte
+		}{
+			{"output.csv", csvdata},
+			{"output.png", outpng.Bytes()},
+		} {
+			ff, err := zipw.Create(file.Name)
+			if err != nil {
+				log.Printf("error creating zip content %v: %v\n", file.Name, err)
+				return
+			}
+			_, err = ff.Write(file.Body)
+			if err != nil {
+				log.Printf("error writing zip content %v: %v\n", file.Name, err)
+				return
+			}
+		}
+		err = zipw.Close()
+		if err != nil {
+			log.Printf("error closing zip-writer: %v\n", err)
+			return
+		}
+		err = zipf.Close()
+		if err != nil {
+			log.Printf("error closing zip-file: %v\n", err)
+			return
+		}
+
+		err = websocket.JSON.Send(c.ws, zipReply{
+			ID: id, Err: err, Href: href, Stage: "zip-done",
+		})
+		if err != nil {
+			log.Printf("error sending zip: %v\n", err)
+			return
+		}
+		log.Printf("saved report under %v\n", href)
 	}
 
+}
+
+func download(w http.ResponseWriter, r *http.Request) {
+	//copy the relevant headers. If you want to preserve the downloaded file name, extract it with go's url parser.
+	w.Header().Set("Content-Disposition", "attachment; filename=output.zip")
+	w.Header().Set("Content-Type", "application/force-download")
+
+	err := r.ParseForm()
+	if err != nil {
+		handleErr(w, "error parsing form", err, http.StatusInternalServerError)
+	}
+
+	log.Printf("download: %#v\n", *r)
+
+	f, err := os.Open(r.Form.Get("file"))
+	if err != nil {
+		handleErr(w, "error opening report file", err, http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	io.Copy(w, f)
+}
+
+func handleErr(w http.ResponseWriter, stage string, err error, code int) {
+	log.Printf(stage+": %v\n", err)
+	fmt.Fprintf(w, stage+": %v\n", err)
+	http.Error(w, err.Error(), code)
 }
 
 func init() {

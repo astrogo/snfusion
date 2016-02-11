@@ -74,13 +74,19 @@
 		background-color: #4285f4;
 		color: #fff;
 	}
-		</style>
+
+
+	</style>
 
 <script type="text/javascript">
 
 var sock = null;
 var wsuri = "ws://{{.Addr}}/data";
 var snfusion_id = 0;
+
+function submitForm(id) {
+  document.getElementById('snfusion-submit-form-'+id).submit();
+}
 
 window.onload = function() {
 	console.log("onload");
@@ -105,7 +111,11 @@ window.onload = function() {
 
 	sock.onmessage = function(e) {
 		var obj = JSON.parse(e.data);
-		console.log("got: "+JSON.stringify(obj));
+		var id = obj.id;
+		if (id != snfusion_id) {
+			alert("invalid websocket data: id="+id+", want="+snfusion_id+"!");
+			return;
+		}
 		switch (obj["stage"]) {
 			case "gen-done":
 				document.getElementById("sim-spinner").active = false;
@@ -125,6 +135,15 @@ window.onload = function() {
 			case "plot-done":
 				document.getElementById("snfusion-plot-"+snfusion_id).innerHTML = obj["svg"];
 				break;
+			case "zip-done":
+				var div = document.getElementById("snfusion-report-"+snfusion_id);
+				var dl = document.createElement("form");
+				dl.id = "snfusion-submit-form-" + id;
+				dl.method="post";
+				dl.action="http://{{.Addr}}/download?"+encodeURI(obj.href);
+				dl.innerHTML = "<paper-button raised onclick=\"submitForm("+id+")\" class=\"colorful\" id=\"snfusion-download-"+snfusion_id+"\">Download ZIP<br>(Simulation - "+id+")</paper-button>";
+				div.appendChild(dl); 
+				break;
 		}
 	}
 };
@@ -133,6 +152,7 @@ function snfusionGen() {
 	snfusion_id++;
 	document.getElementById("sim-spinner").active = true;
 	var data = {
+		"id": snfusion_id,
 		"num_iters": Number(document.getElementById("num-iters").value),
 		"num_carbons": Number(document.getElementById("num-carbons").value),
 		"seed": Number(document.getElementById("seed").value)
@@ -140,7 +160,7 @@ function snfusionGen() {
 	console.log("data: "+JSON.stringify(data));
 	var div = document.createElement("div");
 	div.id = "snfusion-report-" + snfusion_id
-	div.innerHTML = "<h2 id=\"snfusion-report-"+snfusion_id+"\">Simulation - " + snfusion_id + "</h2>";
+	div.innerHTML = "<hr><h2 id=\"snfusion-report-"+snfusion_id+"\">Simulation - " + snfusion_id + "</h2>";
 
 	var gen = document.createElement("p");
 	gen.id = "snfusion-gen-" + snfusion_id;
