@@ -11,6 +11,12 @@ snfusion
 $> go get github.com/astrogo/snfusion/...
 ```
 
+## Contribute
+
+`astrogo/snfusion` is released under the `BSD-3` license.
+Please send a pull request to [astrogo/license](https://github.com/astrogo/license), adding
+yourself to the `AUTHORS` and/or `CONTRIBUTORS` files.
+
 ## Documentation
 
 Documentation is available on [godoc.org](https://godoc.org/github.com/astrogo/snfusion).
