@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	nCarbons = flag.Int(
+	nCarbons = flag.Float64(
 		"carbon-ratio", 60,
 		"carbon ratio (0-100) giving the initial Carbon/Oxygen composition",
 	)

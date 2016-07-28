@@ -83,7 +83,7 @@ func main() {
 
 	log.Printf("plotting...\n")
 	log.Printf("NumIters:   %d\n", engine.NumIters)
-	log.Printf("NumCarbons: %d\n", engine.NumCarbons)
+	log.Printf("NumCarbons: %v\n", engine.NumCarbons)
 	log.Printf("Seed:       %d\n", engine.Seed)
 	log.Printf("Nuclei:     %v\n", engine.Population)
 
@@ -120,7 +120,7 @@ func main() {
 	}
 
 	p.Title.Text = fmt.Sprintf(
-		"Time evolution of nuclei C%d-O%d (seed=%d)",
+		"Time evolution of nuclei C%v-O%v (seed=%d)",
 		engine.NumCarbons,
 		100-engine.NumCarbons,
 		engine.Seed,

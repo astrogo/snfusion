@@ -129,10 +129,10 @@ func (c *client) run() {
 	}()
 
 	type params struct {
-		ID         int   `json:"id"`
-		NumIters   int   `json:"num_iters"`
-		NumCarbons int   `json:"num_carbons"`
-		Seed       int64 `json:"seed"`
+		ID         int     `json:"id"`
+		NumIters   int     `json:"num_iters"`
+		NumCarbons float64 `json:"num_carbons"`
+		Seed       int64   `json:"seed"`
 	}
 
 	type genReply struct {
@@ -245,7 +245,7 @@ func (c *client) run() {
 		}
 
 		p.Title.Text = fmt.Sprintf(
-			"Time evolution of nuclei C%d-O%d (seed=%d)",
+			"Time evolution of nuclei C%v-O%v (seed=%d)",
 			engine.NumCarbons,
 			100-engine.NumCarbons,
 			engine.Seed,

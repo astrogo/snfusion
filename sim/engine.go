@@ -53,7 +53,7 @@ func itoa(i int) string {
 // Engine controls the time evolution of an SN-Fusion simulation.
 type Engine struct {
 	NumIters   int
-	NumCarbons int
+	NumCarbons float64
 	nuclei     []Nucleus
 	Seed       int64
 	Population []Nucleus
@@ -115,7 +115,7 @@ func (e *Engine) init(w io.Writer) error {
 	e.nuclei = make([]Nucleus, 0, nmax)
 	for i := 0; i < nmax; i++ {
 		var n Nucleus
-		v := e.rng.Intn(100)
+		v := e.rng.Float64() * 100
 		switch {
 		case v <= e.NumCarbons:
 			n.Z = 6 // carbon-12
